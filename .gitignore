@@ -6,6 +6,29 @@ __pycache__/
 # C extensions
 *.so
 
+# pyenv files
+venv
+
+
+# IDE files
+.idea
+
+# Data files
+data/aclImdb
+*.tar.gz
+imdb_train_test.csv
+
+# model files
+*.pt
+models/glove/glove*.txt
+
+# figures
+*.png
+
+# logs
+code/logs
+code/log.txt
+
 # Distribution / packaging
 .Python
 build/

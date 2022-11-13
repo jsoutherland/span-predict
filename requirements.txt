@@ -1,0 +1,19 @@
+# notes for getting this to work with newer consumer GPUs (e.g. RTX3090) in Ubuntu
+# torch==1.13.0.dev20221006+cu117
+# pip3 install --pre torch extra-index-url https://download.pytorch.org/whl/nightly/cu117
+
+#tqdm==4.64.1
+numpy
+matplotlib
+jupyter
+scipy
+tensorboard
+
+# imdb
+torch
+torchdata
+torchtext
+pandas
+openpyxl
+
+scikit-learn
