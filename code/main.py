@@ -13,9 +13,7 @@ from utils import build_datasets, count_parameters
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
-from baseline_model import IMDBBaseline
-from span_model import IMDBSpan
-
+from imdb_model import IMDBModel
 from jsd import JSD
 
 NUM_EMBED_DIMS = 100
@@ -33,6 +31,10 @@ filename = "baseline_glove_cnn.pt"
 filename2 = "baseline_glove_cnn_spans.pt"
 SPAN_MODEL = True
 NUM_SPANS = 4
+FREEZE_WORD_EMBEDDINGS = True
+
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+print(f"device: {device}")
 
 glove = Glove()
 glove_fname = f'glove.6B.{NUM_EMBED_DIMS}d.txt'
@@ -40,13 +42,12 @@ glove_path = os.path.join('models', 'glove', glove_fname)
 glove.load_embeddings(glove_path, NUM_EMBED_DIMS)
 
 tokenizer = Tokenizer(glove_embeds=glove)
-M = tokenizer.build_nn_embedding_matrix()
+M = torch.tensor(tokenizer.build_nn_embedding_matrix()).float().to(device)
 print('embed matrix', M.shape)
-if SPAN_MODEL:
-    model = IMDBSpan(embedding_matrix=M, num_spans=NUM_SPANS)
 
-else:
-    model = IMDBBaseline(embedding_matrix=M)
+num_spans = NUM_SPANS if SPAN_MODEL else 0
+model = IMDBModel(embedding_matrix=M, num_spans=num_spans, freeze_word_embeddings=FREEZE_WORD_EMBEDDINGS)
+
 
 train_val_dataset, test_dataset = build_datasets(tokenizer)
 
@@ -75,13 +76,9 @@ print('f_pos', np.mean(all_labels))
 optimizer = optim.Adam(model.parameters(), lr=LR, eps=EPS, betas=BETAS)
 loss_fn = nn.BCEWithLogitsLoss()
 
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-print(f"device: {device}")
 num_params = count_parameters(model)
 print(f"{num_params} trainable model params")
 model.to(device)
-
-sigmoid = nn.Sigmoid()
 
 
 def eval_epoch(loader, training=False, alpha=ALPHA):
@@ -94,37 +91,38 @@ def eval_epoch(loader, training=False, alpha=ALPHA):
     epoch_jsd = 0
     eval_y_preds = []
     eval_ys = []
+
+    if training:
+        torch.set_grad_enabled(True)
+    else:
+        torch.set_grad_enabled(False)
+
     for (X_batch, mask_batch, y_batch) in loader:
         (X_batch, mask_batch, y_batch) = (X_batch.to(device), mask_batch.to(device), y_batch.to(device))
+        optimizer.zero_grad()
 
-        if SPAN_MODEL:
-            y_pred,r = model(X_batch, mask_batch)
+        y_pred, r = model(X_batch, mask_batch)
 
-            jsds = JSD(r, THETA)
-        else:
-            y_pred = model(X_batch, mask_batch)
-
-
-        y_pred_p = sigmoid(y_pred.detach()).squeeze(1).float()
+        y_pred_p = torch.sigmoid(y_pred.detach()).squeeze(1).float()
         y_binary = (y_batch.detach() > 0.5).squeeze(1).int()
         eval_ys.append(y_binary.cpu().numpy())
         eval_y_preds.append(y_pred_p.cpu().numpy())
 
         bce_loss = loss_fn(y_pred, y_batch)
         if SPAN_MODEL:
+            jsds = JSD(r, THETA)
             jsd_loss = torch.mean(jsds)
+            epoch_jsd += jsd_loss.item()
+
             loss = (1.0-alpha)*bce_loss - alpha*jsd_loss
         else:
             loss = bce_loss
         if training:
             loss.backward()
             optimizer.step()
-            optimizer.zero_grad()
 
         epoch_loss += loss.item()
         epoch_bce += bce_loss.item()
-        if SPAN_MODEL:
-            epoch_jsd += jsd_loss.item()
 
     mean_loss = epoch_loss / len(loader)
     mean_bce = epoch_bce / len(loader)
@@ -190,7 +188,6 @@ print(f"  Test | L* {mean_test_loss:.4f} | L1 {mean_test_bce:.4f} | L2 {mean_tes
 
 # Training round 2 - Spans
 # Freezing embedding weights.
-model.embedding.requires_grad_(False)
 # TODO: I'm experimenting with freezing convolution weights too
 for conv in model.convs:
     conv.requires_grad_(False)
