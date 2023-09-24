@@ -24,7 +24,7 @@ class SpanPredict(nn.Module):
         r_parts = []
         for ind in range(self.num_spans):
             r_part = p[:, :, ind] * q[:, :, ind]  # B, S
-            r_part = r_part / (torch.sum(r_part, 1).unsqueeze(1) + 1e-8)
+            r_part = r_part / (torch.sum(r_part, 1, keepdim=True) + 1e-8)
             r_part = r_part * token_mask  # B, S
             r_parts.append(r_part.unsqueeze(2))  # B,S,1
         r = torch.concat(r_parts, 2)  # B, S, J

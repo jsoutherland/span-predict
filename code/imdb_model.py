@@ -43,10 +43,8 @@ class IMDBModel(nn.Module):
 
             M_parts = []
             for ind in range(self.num_spans):
-                m = E * r[:, :, ind].unsqueeze(2)  # B,S,K
-                # m = torch.mean(m, 1).unsqueeze(2)  # B, K, 1  Mean pooling
-                m = torch.max(m, 1).values.unsqueeze(2)  # Max pooling
-                m = m.permute(0, 2, 1)  # B,1,K
+                m = E * r[:, :, [ind]]  # B,S,K
+                m = torch.max(m, 1, keepdim=True).values  # B,S,K -> B,1,K
                 M_parts.append(m)
             M = torch.concat(M_parts, 1)  # B,J,K
             z = self.layer_out(M)  # B, J, 1

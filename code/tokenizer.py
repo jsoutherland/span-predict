@@ -19,9 +19,7 @@ class Tokenizer:
         self.pad_vec = np.zeros(n_glove_dims)
         self.unk_vec = glove_embeds.unk_vector
 
-        self.word2idx = {}
-        self.word2idx[self.pad_token] = self.pad_ind
-        self.word2idx[self.unk_token] = self.unk_ind
+        self.word2idx = {self.pad_token: self.pad_ind, self.unk_token: self.unk_ind}
         self.idx2word = [0 for _ in range(self.n_special_tokens)]
         self.idx2word[self.pad_ind] = self.pad_token
         self.idx2word[self.unk_ind] = self.unk_token
@@ -43,7 +41,7 @@ class Tokenizer:
         M[self.n_special_tokens:, :] = np.array(self.glove.vectors)
         return M
 
-    def tokenize(self, text: str, padding:int = None, truncate:int = None):
+    def tokenize(self, text: str, padding: int = None, truncate: int = None):
         tokens_raw = self.base_tokenizer(text)
         tokens = []
         token_ids = []

@@ -18,12 +18,12 @@ from jsd import JSD
 
 NUM_EMBED_DIMS = 100
 SEQ_LEN = 512
-BATCH_SIZE = 8
-LR = 1e-3
+BATCH_SIZE = 64
+LR = 5e-3
 EPS = 1e-7
 BETAS = (0.9, 0.999)
-NUM_EPOCHS = 25
-NUM_EPOCHS2 = 200
+NUM_EPOCHS = 10
+NUM_EPOCHS2 = 50
 
 THETA = 0.45
 ALPHA = 0.1
@@ -73,7 +73,7 @@ test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=Tr
 print('f_pos', np.mean(all_labels))
 
 # optimizer = optim.SGD(model.parameters(), lr=LR)
-optimizer = optim.Adam(model.parameters(), lr=LR, eps=EPS, betas=BETAS)
+optimizer = optim.AdamW(model.parameters(), lr=LR, eps=EPS, betas=BETAS)
 loss_fn = nn.BCEWithLogitsLoss()
 
 num_params = count_parameters(model)
@@ -164,7 +164,7 @@ for epoch in range(NUM_EPOCHS):
     print(f"{'* ' if best else '  '}Epoch {epoch+1:3d} | L* {mean_train_loss:.4f}, {mean_val_loss:.4f} | L1  {mean_train_bce:.4f}, {mean_val_bce:.4f} | L2 {mean_train_jsd: .4f}, {mean_val_jsd: .4f} | AUC {val_roc_auc:.3f} | alpha {alpha:.3f}")
     if epoch % 5 == 0:
         mean_epoch_time = np.mean(np.array(epoch_times))
-        print(f"{mean_epoch_time:.2f} seconds per batch average")
+        print(f"{mean_epoch_time:.2f} seconds per epoch average")
     if best:
         # best_loss = mean_val_loss
         best_roc = val_roc_auc
@@ -197,10 +197,10 @@ print(f"{num_params} trainable model params")
 
 best_loss = float('inf')
 epoch_times = []
+ramp_start = 0
+ramp_end = NUM_EPOCHS2 / 2
+ramp_width = float(ramp_end - ramp_start)
 for epoch in range(NUM_EPOCHS2):
-    ramp_start = 0
-    ramp_end = 100
-    ramp_width = float(ramp_end - ramp_start)
     if epoch < ramp_start:
         alpha = 0.0
     elif epoch > ramp_end:
@@ -218,7 +218,7 @@ for epoch in range(NUM_EPOCHS2):
     print(f"{'* ' if best else '  '}Epoch {epoch+1:3d} | L* {mean_train_loss:.4f}, {mean_val_loss:.4f} | L1  {mean_train_bce:.4f}, {mean_val_bce:.4f} | L2 {mean_train_jsd: .4f}, {mean_val_jsd: .4f} | AUC {val_roc_auc:.3f} | alpha {alpha:.3f}")
     if epoch % 5 == 0:
         mean_epoch_time = np.mean(np.array(epoch_times))
-        print(f"{mean_epoch_time:.2f} seconds per batch average")
+        print(f"{mean_epoch_time:.2f} seconds per epoch average")
 
     if best:
         best_loss = mean_val_loss
