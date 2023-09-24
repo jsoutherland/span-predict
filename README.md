@@ -8,8 +8,9 @@ One was in Tensorflow and the other was in Pytorch.
 
 There is a lot of data wrangling and pretrained model code in the repo so far.  I think if someone was interested in re-using this code 
 they would just be interested in:
-* `code/jsd.py`
-* `code/span_model.py`
+* `code/span_predict.py` - For the `SpanPredict` module
+* `code/jsd.py` - For the JSD loss
+* `code/imdb_model.py` - To see how to use the `SpanPredict` module
 
 Parts of `code/main.py` might be useful to reference, to see how to handle training.
 
